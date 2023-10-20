@@ -1,0 +1,57 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+stages:
+  - stage: "Build"
+    displayName: Build
+    pool:
+      vmImage: "windows-latest"
+    variables:
+      BiuldConfiguration: Release
+      BiuldPlatform: "any cpu"
+      slnfilepath: democodepush/democodepush.sln
+    jobs:
+      - job: 
+        steps:
+          - task: NuGetToolInstaller@0
+            displayName: 'Use NuGet 4.4.1'
+            inputs:
+              versionSpec: 4.4.1
+          - task: NuGetCommand@2
+            displayName: ".Net Restoration"
+            inputs:
+              command: 'restore'
+              restoreSolution: '**/*.sln'
+              feedsToUse: 'select'
+          
+          - task: VSBuild@1
+            displayName: "Visual-Studio Biuld"
+            inputs:
+              solution: '**\*.sln'
+              msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(build.artifactstagingdirectory)\\"'
+              platform: '$(BuildPlatform)'
+              configuration: '$(BuildConfiguration)'
+          
+          - task: VSTest@3
+            displayName: "Test Assembly"
+            inputs:
+              testSelector: 'testAssemblies'
+              testAssemblyVer2: |
+                **\*test*.dll
+                !**\*TestAdapter.dll
+                !**\obj\**
+              searchFolder: '$(System.DefaultWorkingDirectory)'
+              
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish Artifact"
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'drop'
+              publishLocation: 'Container'
+
+  
